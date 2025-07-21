@@ -135,10 +135,10 @@ class CacheManager:
     
     def __init__(self):
         # Different caches for different data types
-        self.user_listings_cache = SimpleCache(ttl=300, max_size=500)  # 5 minutes
-        self.car_listings_cache = SimpleCache(ttl=1800, max_size=100)  # 30 minutes
-        self.user_sales_cache = SimpleCache(ttl=600, max_size=300)     # 10 minutes
-        self.active_deals_cache = SimpleCache(ttl=60, max_size=200)    # 1 minute
+        self.user_listings_cache = SimpleCache(default_ttl=300, max_size=500)  # 5 minutes
+        self.car_listings_cache = SimpleCache(default_ttl=1800, max_size=100)  # 30 minutes
+        self.user_sales_cache = SimpleCache(default_ttl=600, max_size=300)     # 10 minutes
+        self.active_deals_cache = SimpleCache(default_ttl=60, max_size=200)    # 1 minute
         
         logger.info("Cache manager initialized")
     

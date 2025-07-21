@@ -1,10 +1,14 @@
 import os
 from dataclasses import dataclass
 from typing import Optional
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Try to load dotenv, fallback if not available
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # dotenv not available, use environment variables directly
+    pass
 
 @dataclass
 class BotConfig:

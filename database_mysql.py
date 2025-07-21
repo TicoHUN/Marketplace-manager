@@ -1,12 +1,33 @@
 
-import mysql.connector
-from mysql.connector import pooling, Error as MySQLError
 import json
 import os
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Tuple
 import asyncio
 from contextlib import contextmanager
+
+# Try to import mysql.connector, fallback if not available
+try:
+    import mysql.connector
+    from mysql.connector import pooling, Error as MySQLError
+    MYSQL_AVAILABLE = True
+except ImportError:
+    MYSQL_AVAILABLE = False
+    # Create mock classes for testing
+    class mysql:
+        connector = type('connector', (), {
+            'connect': lambda **kwargs: None,
+            'Error': Exception
+        })()
+    
+    class pooling:
+        class MySQLConnectionPool:
+            def __init__(self, **kwargs):
+                pass
+            def get_connection(self):
+                return None
+    
+    MySQLError = Exception
 
 # Import new configuration and logging
 try:

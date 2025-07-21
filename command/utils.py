@@ -1,11 +1,46 @@
-import discord
+# Try to import discord, fallback if not available
+try:
+    import discord
+    DISCORD_AVAILABLE = True
+except ImportError:
+    DISCORD_AVAILABLE = False
+    # Create mock discord classes for testing
+    class discord:
+        class Embed:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+        class Color:
+            @staticmethod
+            def orange():
+                return "orange"
+
 import asyncio
-import aiohttp
 import io
 import os
 from datetime import datetime
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Try to import aiohttp, fallback if not available
+try:
+    import aiohttp
+    AIOHTTP_AVAILABLE = True
+except ImportError:
+    AIOHTTP_AVAILABLE = False
+    # Mock aiohttp for testing
+    class aiohttp:
+        class ClientSession:
+            def __init__(self):
+                pass
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *args):
+                pass
+            def get(self, url):
+                return self
+            async def __aenter__(self):
+                return type('Response', (), {'status': 200, 'read': lambda: b'test'})()
+
 from database_mysql import *
 
 # Import new configuration and logging

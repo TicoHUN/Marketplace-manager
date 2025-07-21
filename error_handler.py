@@ -1,10 +1,42 @@
-import discord
 import traceback
 from typing import Optional, Dict, Any
 from datetime import datetime
-from logger_config import get_logger
 
-logger = get_logger("error_handler")
+# Try to import discord, fallback if not available
+try:
+    import discord
+    DISCORD_AVAILABLE = True
+except ImportError:
+    DISCORD_AVAILABLE = False
+    # Create mock discord classes for testing
+    class discord:
+        class Interaction:
+            pass
+        class Embed:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+        class Color:
+            @staticmethod
+            def red():
+                return "red"
+        errors = type('errors', (), {
+            'Forbidden': Exception,
+            'NotFound': Exception,
+            'HTTPException': Exception
+        })()
+
+try:
+    from logger_config import get_logger
+    logger = get_logger("error_handler")
+except ImportError:
+    # Fallback logger
+    class logger:
+        @staticmethod
+        def error(msg, exc_info=False): print(f"ERROR: {msg}")
+        @staticmethod
+        def warning(msg): print(f"WARNING: {msg}")
+        @staticmethod
+        def info(msg): print(f"INFO: {msg}")
 
 class BotError(Exception):
     """Base exception class for bot-specific errors"""

@@ -2,6 +2,7 @@ import discord
 from discord.ui import Modal, TextInput, View, Button
 from discord import app_commands, Interaction, TextStyle, ButtonStyle
 import asyncio
+from typing import Optional
 from .utils import (
     format_price, listing_timeout, save_image_to_bot_channel,
     send_security_notice, private_channels_activity, log_channel_messages
@@ -9,16 +10,37 @@ from .utils import (
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import improved modules
+try:
+    from config import config
+    from logger_config import get_logger
+    from validation import InputValidator, ValidationError
+    from error_handler import handle_errors, ValidationError as BotValidationError
+    logger = get_logger("sell")
+except ImportError:
+    # Fallback for backward compatibility
+    SELL_CHANNEL_ID = 1394786079995072704
+    SELL_TRADE_CHANNEL_ID = 1394786077180694529
+    class config:
+        SELL_CHANNEL_ID = SELL_CHANNEL_ID
+        SELL_TRADE_CHANNEL_ID = SELL_TRADE_CHANNEL_ID
+        MAX_USER_LISTINGS = 3
+    def handle_errors(func): return func
+    def log_info(msg): print(msg)
+    def log_error(msg, exc_info=False): print(f"ERROR: {msg}")
+    class InputValidator:
+        @staticmethod
+        def validate_price(price): return type('obj', (object,), {'is_valid': True, 'value': int(price.replace('$','').replace(',',''))})()
+        @staticmethod  
+        def validate_car_name(name): return type('obj', (object,), {'is_valid': True, 'value': name})()
+
 from database_mysql import (
     get_user_listings, add_user_listing, add_active_deal, 
     get_pending_listing, add_pending_listing, remove_pending_listing,
     resolve_car_shortcode
 )
 from .car_disambiguation import handle_car_disambiguation
-
-# Channel IDs
-SELL_CHANNEL_ID = 1394786079995072704  # ID for #sell-cars channel
-SELL_TRADE_CHANNEL_ID = 1394786077180694529  # ID for #make-sell-trade channel
 
 # Pending listings are now handled by the database
 
@@ -37,20 +59,19 @@ class MakeOfferModal(Modal, title='Make an Offer'):
         self.car_name = car_name
         self.listing_message_id = listing_message_id
 
+    @handle_errors()
     async def on_submit(self, interaction: Interaction):
         try:
-            # Validate offered price
-            offered_price_str = self.offered_price.value.replace('$', '').replace(',', '').replace(' ', '')
-            try:
-                offered_price = int(offered_price_str)
-                if offered_price <= 0:
-                    raise ValueError()
-            except ValueError:
+            # Validate offered price using new validation system
+            price_validation = InputValidator.validate_price(self.offered_price.value)
+            if not price_validation.is_valid:
                 await interaction.response.send_message(
-                    "Offered price must be a valid positive number!",
+                    f"❌ {price_validation.error_message}",
                     ephemeral=True
                 )
                 return
+            
+            offered_price = price_validation.value
 
             # Format price
             formatted_price = format_price(str(offered_price))

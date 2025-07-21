@@ -1,8 +1,8 @@
 [project]
-name = "python-template"
-version = "0.1.0"
-description = ""
-authors = ["Your Name <you@example.com>"]
+name = "discord-car-trading-bot"
+version = "1.0.0"
+description = "Advanced Discord bot for car trading with improved error handling, logging, and validation"
+authors = ["Bot Developer <developer@example.com>"]
 requires-python = ">=3.11"
 dependencies = [
     "aiohttp>=3.12.13",
@@ -10,3 +10,26 @@ dependencies = [
     "mysql-connector-python>=9.3.0",
     "python-dotenv>=1.1.1",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

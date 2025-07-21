@@ -2,15 +2,17 @@ import discord
 from discord import app_commands, Interaction
 import asyncio
 import os
-from dotenv import load_dotenv
+from typing import Dict, List
 
-# Load environment variables from .env file
-load_dotenv()
+# Import new configuration and logging
+from config import config
+from logger_config import get_logger, log_info, log_error, log_warning
+from validation import SecurityValidator
 
 # Import command modules
 from commands.utils import (
-    BOT_CHANNEL_ID, RISKY_DM_PHRASES, PAYMENT_PLATFORMS, private_channels_activity,
-    private_channel_messages, check_risky_content, send_security_notice, log_channel_messages
+    private_channels_activity, private_channel_messages, 
+    send_security_notice, log_channel_messages
 )
 from database_mysql import (
     init_connection_pool, init_database, get_all_user_listings, get_user_listings, 
@@ -44,31 +46,15 @@ from commands.sell_trade_embed import setup_sell_trade_embed, setup_persistent_s
 from commands.rules_embed import setup_rules_embed, setup_persistent_rules_views
 from commands.deal_confirmation import setup_persistent_deal_confirmation_views, DealConfirmationView
 
-# --- Configuration ---
-BOT_TOKEN = os.getenv('DISCORD_BOT_TOKEN')
-SELL_CHANNEL_ID = 1394786079995072704
-TRADE_CHANNEL_ID = 1394786078552227861
-AUCTION_CHANNEL_ID = 1394786069534216353
-AUCTION_FORUM_ID = 1394800803197354014
-GIVEAWAY_CHANNEL_ID = 1394786061540130879
-GIVEAWAYS_CHANNEL_ID = 1394786059635654817
-GIVEAWAY_REVIEW_ID = 1394786040438587503
-SUPPORT_CHANNEL_ID = 1394786056699641977
-TRADELOG_CHANNEL_ID = 1394786041243762729
-BOT_CHANNEL_ID = 1394786046109024428
-SELL_TRADE_CHANNEL_ID = 1394786077180694529
-MEMBER_ROLE_ID = 1394786020842799235
+# Initialize logger
+logger = get_logger("main")
 
-# Time to wait for an image upload in seconds (90 seconds)
-IMAGE_UPLOAD_TIMEOUT = 90
-
-# Validate bot token
-if not BOT_TOKEN:
-    print("ERROR: DISCORD_BOT_TOKEN environment variable is not set!")
-    exit(1)
-
-if not BOT_TOKEN.startswith(('Bot ', 'Bearer ')) and '.' not in BOT_TOKEN:
-    print("ERROR: DISCORD_BOT_TOKEN appears to be invalid format!")
+# Validate configuration
+try:
+    config.validate()
+    log_info("Configuration validated successfully")
+except ValueError as e:
+    log_error(f"Configuration error: {e}")
     exit(1)
 
 # Define intents
@@ -81,14 +67,14 @@ bot = discord.Client(intents=intents)
 tree = app_commands.CommandTree(bot)
 
 async def check_inactive_channels():
-    """Check for inactive private channels and close them after 2 hours"""
+    """Check for inactive private channels and close them after configured timeout"""
     while True:
         try:
             current_time = asyncio.get_event_loop().time()
             channels_to_close = []
 
             for channel_id, last_activity in list(private_channels_activity.items()):
-                if current_time - last_activity > 7200:  # 2 hours
+                if current_time - last_activity > config.CHANNEL_INACTIVITY_TIMEOUT:
                     channels_to_close.append(channel_id)
 
             for channel_id in channels_to_close:
@@ -101,7 +87,7 @@ async def check_inactive_channels():
                         # Send notice before closing
                         embed = discord.Embed(
                             title="⏰ Channel Auto-Close",
-                            description="This channel has been inactive for 2 hours and will be automatically closed.",
+                            description=f"This channel has been inactive for {config.CHANNEL_INACTIVITY_TIMEOUT//3600} hours and will be automatically closed.",
                             color=discord.Color.orange()
                         )
                         await channel.send(embed=embed)
@@ -110,6 +96,7 @@ async def check_inactive_channels():
                         # Log messages before closing
                         await log_channel_messages(bot, channel)
                         await channel.delete(reason="Auto-closed due to inactivity")
+                        log_info(f"Auto-closed inactive channel: {channel.name}")
 
                     # Remove from tracking
                     if channel_id in private_channels_activity:
@@ -120,7 +107,7 @@ async def check_inactive_channels():
                     remove_deal_confirmation(channel_id)
 
                 except Exception as e:
-                    print(f"Error auto-closing channel {channel_id}: {e}")
+                    log_error(f"Error auto-closing channel {channel_id}: {e}")
                     if channel_id in private_channels_activity:
                         del private_channels_activity[channel_id]
 
@@ -141,33 +128,33 @@ async def check_inactive_channels():
                     del private_channel_messages[channel_id]
 
         except Exception as e:
-            print(f"Error in check_inactive_channels: {e}")
+            log_error(f"Error in check_inactive_channels: {e}")
 
         await asyncio.sleep(300)  # Check every 5 minutes
 
 @bot.event
 async def on_ready():
-    print(f'Logged in as {bot.user} (ID: {bot.user.id})')
-    print('------')
+    log_info(f'Logged in as {bot.user} (ID: {bot.user.id})')
+    log_info('Bot is ready and online')
 
     try:
         # Clear existing commands first
-        print("Clearing existing commands...")
+        log_info("Clearing existing commands...")
         tree.clear_commands(guild=None)
         await asyncio.sleep(3)
 
         # Setup all commands
-        print("Setting up commands...")
+        log_info("Setting up commands...")
         from commands.sell import setup_sell_command
         from commands.trade import setup_trade_command
         from commands.auction import setup_auction_commands
         from commands.giveaway import setup_giveaway_command
 
         setup_sell_command(tree)
-        print("  - Sell command setup")
+        log_info("  - Sell command setup")
 
         setup_trade_command(tree)
-        print("  - Trade command setup")
+        log_info("  - Trade command setup")
 
         try:
             setup_auction_commands(tree)
@@ -342,13 +329,13 @@ async def on_message(message):
         return
 
     # Handle support channel
-    if message.channel.id == SUPPORT_CHANNEL_ID:
+    if message.channel.id == config.SUPPORT_CHANNEL_ID:
         if not message.author.guild_permissions.administrator and not message.interaction:
             try:
                 await message.delete()
-                print(f"Deleted non-admin message from {message.author} in #support")
+                log_info(f"Deleted non-admin message from {message.author} in #support")
             except discord.HTTPException as e:
-                print(f"Failed to delete message in #support: {e}")
+                log_error(f"Failed to delete message in #support: {e}")
         return
 
     # Update activity for private channels and monitor for risky content
@@ -362,7 +349,7 @@ async def on_message(message):
         if (message.channel.name.startswith('car-sale-') or message.channel.name.startswith('car-trade-') or
             message.channel.name.startswith('auction-deal-') or message.channel.name.startswith('giveaway-claim-') or
             message.channel.name.startswith('admin-giveaway-claim-')):
-            dm_flags, payment_flags = check_risky_content(message.content)
+            dm_flags, payment_flags = SecurityValidator.check_risky_content(message.content)
 
             if dm_flags or payment_flags:
                 warning_embed = discord.Embed(
@@ -1381,4 +1368,8 @@ def setup_persistent_channel_button_views(bot):
     bot.add_view(DealButtonsView())
 
 if __name__ == "__main__":
-    bot.run(BOT_TOKEN)
+    try:
+        bot.run(config.BOT_TOKEN)
+    except Exception as e:
+        log_error(f"Failed to start bot: {e}", exc_info=True)
+        exit(1)

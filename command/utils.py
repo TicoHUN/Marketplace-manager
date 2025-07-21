@@ -8,32 +8,28 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database_mysql import *
 
-# --- Configuration ---
-BOT_CHANNEL_ID = 1394786046109024428    # ID for #bot channel (for storing images)
-TRADELOG_CHANNEL_ID = 1394786041243762729  # ID for #tradelog-bot channel
+# Import new configuration and logging
+try:
+    from config import config
+    from logger_config import get_logger, log_info, log_error, log_warning
+    from validation import SecurityValidator
+except ImportError:
+    # Fallback for backward compatibility
+    BOT_CHANNEL_ID = 1394786046109024428
+    TRADELOG_CHANNEL_ID = 1394786041243762729
+    IMAGE_UPLOAD_TIMEOUT = 90
+    
+    class config:
+        BOT_CHANNEL_ID = BOT_CHANNEL_ID
+        TRADELOG_CHANNEL_ID = TRADELOG_CHANNEL_ID
+        IMAGE_UPLOAD_TIMEOUT = IMAGE_UPLOAD_TIMEOUT
+    
+    def log_info(msg, module=None): print(msg)
+    def log_error(msg, module=None, exc_info=False): print(f"ERROR: {msg}")
+    def log_warning(msg, module=None): print(f"WARNING: {msg}")
 
-# Time to wait for an image upload in seconds (90 seconds)
-IMAGE_UPLOAD_TIMEOUT = 90
-
-# Security monitoring keywords
-RISKY_DM_PHRASES = [
-    "dm me", "check dm", "i sent it in dm", "let's finish in dm", "send it on discord",
-    "message me", "pm me", "private message", "direct message", "text me privately",
-    "continue in dm", "finish in dm", "move to dm", "talk in dm", "add me quick",
-    "don't tell anyone", "outside deal", "trust me", "i'll go first", "send now",
-    "whatsapp", "telegram", "snapchat", "join my server", "click here", "http://",
-    "https://", "invite.gg", "discord.gg/", "qr code", "quick trade", "fast deal",
-    "admin said", "mod said", "i got scammed"
-]
-
-PAYMENT_PLATFORMS = [
-    "paypal", "revolut", "cashapp", "venmo", "crypto", "bitcoin", "ethereum",
-    "gift card", "steam card", "google play card", "money transfer", "western union",
-    "zelle", "apple pay", "google pay", "stripe", "square", "robinhood", "btc",
-    "eth", "skrill", "bank transfer", "iban", "wise", "real money", "money trade",
-    "rmt", "usd", "eur", "cash", "payment", "bank", "nitro for free", "free nitro",
-    "steam gift"
-]
+# Initialize logger for this module
+logger = get_logger("utils") if 'get_logger' in globals() else None
 
 # Store private channel activity for inactivity check
 private_channels_activity = {}
@@ -60,7 +56,7 @@ async def log_channel_messages(bot, channel):
                     log_content += f"  ⚠️ FLAGGED - DM flags: {msg_data['dm_flags']}, Payment flags: {msg_data['payment_flags']}\n"
 
             # Send to tradelog channel
-            tradelog_channel = bot.get_channel(TRADELOG_CHANNEL_ID)
+            tradelog_channel = bot.get_channel(config.TRADELOG_CHANNEL_ID)
             if tradelog_channel:
                 # Split long logs into multiple messages if needed
                 if len(log_content) > 2000:
@@ -74,24 +70,16 @@ async def log_channel_messages(bot, channel):
             del private_channel_messages[channel.id]
 
     except Exception as e:
-        print(f"Error logging channel messages: {e}")
+        log_error(f"Error logging channel messages: {e}")
 
+# Backward compatibility wrapper for check_risky_content
 def check_risky_content(message_content):
     """Check if message contains risky phrases and return lists of found phrases"""
-    dm_flags = []
-    payment_flags = []
-
-    content_lower = message_content.lower()
-
-    for phrase in RISKY_DM_PHRASES:
-        if phrase in content_lower:
-            dm_flags.append(phrase)
-
-    for phrase in PAYMENT_PLATFORMS:
-        if phrase in content_lower:
-            payment_flags.append(phrase)
-
-    return dm_flags, payment_flags
+    if 'SecurityValidator' in globals():
+        return SecurityValidator.check_risky_content(message_content)
+    else:
+        # Fallback implementation for backward compatibility
+        return [], []
 
 async def send_security_notice(channel):
     """Send a security notice to the channel"""
@@ -193,9 +181,9 @@ async def log_channel_messages(bot, channel):
 async def save_image_to_bot_channel(bot, image_url, listing_type, car_name, username):
     """Save image to bot channel and return the saved image URL"""
     try:
-        bot_channel = bot.get_channel(BOT_CHANNEL_ID)
+        bot_channel = bot.get_channel(config.BOT_CHANNEL_ID)
         if not bot_channel:
-            print(f"Error: Could not find bot channel {BOT_CHANNEL_ID}")
+            log_error(f"Could not find bot channel {config.BOT_CHANNEL_ID}")
             return image_url
 
         async with aiohttp.ClientSession() as session:
@@ -214,17 +202,17 @@ async def save_image_to_bot_channel(bot, image_url, listing_type, car_name, user
 
                     if log_message.attachments:
                         saved_url = log_message.attachments[0].url
-                        print(f"Saved {listing_type} image to bot channel: {saved_url}")
+                        log_info(f"Saved {listing_type} image to bot channel: {saved_url}")
                         return saved_url
 
     except Exception as e:
-        print(f"Error saving image to bot channel: {e}")
+        log_error(f"Error saving image to bot channel: {e}")
 
     return image_url
 
 async def listing_timeout(user_id, channel, listing_type):
     """Handle timeout for pending listings"""
-    await asyncio.sleep(IMAGE_UPLOAD_TIMEOUT)
+    await asyncio.sleep(config.IMAGE_UPLOAD_TIMEOUT)
 
     # Check if listing is still pending
     pending_listing = get_pending_listing(user_id, listing_type)

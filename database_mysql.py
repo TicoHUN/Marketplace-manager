@@ -1,11 +1,38 @@
 
 import mysql.connector
-from mysql.connector import pooling
+from mysql.connector import pooling, Error as MySQLError
 import json
 import os
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Tuple
 import asyncio
+from contextlib import contextmanager
+
+# Import new configuration and logging
+try:
+    from config import config
+    from logger_config import get_logger
+    logger = get_logger("database")
+except ImportError:
+    # Fallback for backward compatibility
+    class config:
+        MYSQL_HOST = os.environ.get('MYSQL_HOST', 'localhost')
+        MYSQL_USER = os.environ.get('MYSQL_USER', 'root')
+        MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD', '')
+        MYSQL_DATABASE = os.environ.get('MYSQL_DATABASE', 'bot_database')
+        MYSQL_PORT = int(os.environ.get('MYSQL_PORT', '3306'))
+        DB_POOL_SIZE = 10
+        DB_POOL_RESET_SESSION = True
+    
+    class logger:
+        @staticmethod
+        def info(msg): print(f"INFO: {msg}")
+        @staticmethod
+        def error(msg, exc_info=False): print(f"ERROR: {msg}")
+        @staticmethod
+        def warning(msg): print(f"WARNING: {msg}")
+        @staticmethod
+        def debug(msg): print(f"DEBUG: {msg}")
 
 # Global connection pool
 connection_pool = None
@@ -14,36 +41,32 @@ def init_connection_pool():
     """Initialize the MySQL connection pool"""
     global connection_pool
 
-    # Get MySQL connection parameters from environment variables
-    mysql_host = os.environ.get('MYSQL_HOST', 'localhost')
-    mysql_user = os.environ.get('MYSQL_USER', 'root')
-    mysql_password = os.environ.get('MYSQL_PASSWORD', '')
-    mysql_database = os.environ.get('MYSQL_DATABASE', 'bot_database')
-    mysql_port = int(os.environ.get('MYSQL_PORT', '3306'))
-
-    if not mysql_password:
+    if not config.MYSQL_PASSWORD:
         raise ValueError("MYSQL_PASSWORD environment variable not set")
 
     try:
         # Create connection pool configuration
-        config = {
-            'user': mysql_user,
-            'password': mysql_password,
-            'host': mysql_host,
-            'port': mysql_port,
-            'database': mysql_database,
+        pool_config = {
+            'user': config.MYSQL_USER,
+            'password': config.MYSQL_PASSWORD,
+            'host': config.MYSQL_HOST,
+            'port': config.MYSQL_PORT,
+            'database': config.MYSQL_DATABASE,
             'pool_name': 'bot_pool',
-            'pool_size': 10,
-            'pool_reset_session': True,
+            'pool_size': config.DB_POOL_SIZE,
+            'pool_reset_session': config.DB_POOL_RESET_SESSION,
             'autocommit': False,
             'charset': 'utf8mb4',
             'collation': 'utf8mb4_unicode_ci'
         }
 
-        connection_pool = pooling.MySQLConnectionPool(**config)
-        print("MySQL connection pool initialized successfully")
+        connection_pool = pooling.MySQLConnectionPool(**pool_config)
+        logger.info("MySQL connection pool initialized successfully")
+    except MySQLError as e:
+        logger.error(f"MySQL error initializing connection pool: {e}", exc_info=True)
+        raise
     except Exception as e:
-        print(f"Error initializing MySQL connection pool: {e}")
+        logger.error(f"Unexpected error initializing MySQL connection pool: {e}", exc_info=True)
         raise
 
 def get_db_connection():
@@ -58,26 +81,28 @@ def get_db_connection():
             return conn
         else:
             raise Exception("Unable to get connection from pool")
-    except Exception as e:
-        print(f"Error getting connection from pool: {e}")
+    except MySQLError as e:
+        logger.error(f"MySQL error getting connection from pool: {e}")
         # Fallback to direct connection
-        mysql_host = os.environ.get('MYSQL_HOST', 'localhost')
-        mysql_user = os.environ.get('MYSQL_USER', 'root')
-        mysql_password = os.environ.get('MYSQL_PASSWORD', '')
-        mysql_database = os.environ.get('MYSQL_DATABASE', 'bot_database')
-        mysql_port = int(os.environ.get('MYSQL_PORT', '3306'))
-
-        conn = mysql.connector.connect(
-            host=mysql_host,
-            user=mysql_user,
-            password=mysql_password,
-            database=mysql_database,
-            port=mysql_port,
-            autocommit=False,
-            charset='utf8mb4',
-            collation='utf8mb4_unicode_ci'
-        )
-        return conn
+        try:
+            conn = mysql.connector.connect(
+                host=config.MYSQL_HOST,
+                user=config.MYSQL_USER,
+                password=config.MYSQL_PASSWORD,
+                database=config.MYSQL_DATABASE,
+                port=config.MYSQL_PORT,
+                autocommit=False,
+                charset='utf8mb4',
+                collation='utf8mb4_unicode_ci'
+            )
+            logger.warning("Using direct connection as fallback")
+            return conn
+        except MySQLError as fallback_error:
+            logger.error(f"Fallback connection also failed: {fallback_error}", exc_info=True)
+            raise
+    except Exception as e:
+        logger.error(f"Unexpected error getting connection from pool: {e}", exc_info=True)
+        raise
 
 def release_db_connection(conn):
     """Release the database connection back to the pool"""
@@ -85,33 +110,51 @@ def release_db_connection(conn):
         try:
             conn.close()
         except Exception as e:
-            print(f"Error releasing connection: {e}")
+            logger.error(f"Error releasing connection: {e}")
 
-def execute_query(query, params=None, fetch=None):
-    """Execute a query with proper connection management"""
+@contextmanager
+def get_db_cursor():
+    """Context manager for database operations"""
     conn = None
+    cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute(query, params)
-
-        if fetch == 'one':
-            result = cursor.fetchone()
-        elif fetch == 'all':
-            result = cursor.fetchall()
-        else:
-            result = None
-
+        yield cursor, conn
         conn.commit()
-        return result
+    except MySQLError as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Database error in operation: {e}", exc_info=True)
+        raise
     except Exception as e:
         if conn:
             conn.rollback()
-        print(f"Error executing query: {e}")
+        logger.error(f"Unexpected error in database operation: {e}", exc_info=True)
         raise
     finally:
+        if cursor:
+            cursor.close()
         if conn:
             release_db_connection(conn)
+
+def execute_query(query, params=None, fetch=None):
+    """Execute a query with proper connection management"""
+    try:
+        with get_db_cursor() as (cursor, conn):
+            cursor.execute(query, params)
+
+            if fetch == 'one':
+                result = cursor.fetchone()
+            elif fetch == 'all':
+                result = cursor.fetchall()
+            else:
+                result = None
+
+            return result
+    except Exception as e:
+        logger.error(f"Error executing query: {query[:100]}... - {e}", exc_info=True)
+        raise
 
 def init_database():
     """Initialize the MySQL database with all required tables"""

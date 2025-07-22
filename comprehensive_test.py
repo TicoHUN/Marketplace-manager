@@ -272,10 +272,10 @@ def test_command_improvements():
     """Test command module improvements"""
     print("\n⚡ Testing Command Improvements...")
     try:
-        sys.path.append('command')
+        sys.path.append('commands')
         
         # Test utils module
-        from command import utils
+        from commands import utils
         assert hasattr(utils, 'config')
         assert hasattr(utils, 'format_price')
         assert hasattr(utils, 'check_risky_content')

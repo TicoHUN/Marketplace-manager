@@ -212,7 +212,9 @@ class DealConfirmationView(discord.ui.View):
             deal_info = get_active_deal(self.channel_id)
             if deal_info and deal_info.get("listing_message_id"):
                 try:
-                    from main import SELL_CHANNEL_ID, TRADE_CHANNEL_ID
+                    from config import config
+                    SELL_CHANNEL_ID = config.SELL_CHANNEL_ID
+                    TRADE_CHANNEL_ID = config.TRADE_CHANNEL_ID
 
                     listing_channel = None
                     channel_name = interaction.channel.name

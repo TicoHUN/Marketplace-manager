@@ -9,6 +9,14 @@ from config import config
 from logger_config import get_logger, log_info, log_error, log_warning
 from validation import SecurityValidator
 
+# Import channel constants from config
+SELL_CHANNEL_ID = config.SELL_CHANNEL_ID
+TRADE_CHANNEL_ID = config.TRADE_CHANNEL_ID
+AUCTION_CHANNEL_ID = config.AUCTION_CHANNEL_ID
+AUCTION_FORUM_ID = config.AUCTION_FORUM_ID
+GIVEAWAY_CHANNEL_ID = config.GIVEAWAY_CHANNEL_ID
+SELL_TRADE_CHANNEL_ID = config.SELL_TRADE_CHANNEL_ID
+
 # Import new security system
 try:
     from security_system import SecurityMonitor, setup_security_monitoring

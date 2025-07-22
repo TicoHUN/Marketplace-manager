@@ -38,8 +38,8 @@ This pull request implements comprehensive improvements to the Discord car tradi
 ### **🔧 Enhanced Existing Files**
 - `main.py` - Updated to use new configuration and logging
 - `database_mysql.py` - Enhanced with better error handling and connection management
-- `command/utils.py` - Refactored to use centralized configuration
-- `command/sell.py` - Improved validation and error handling
+- `commands/utils.py` - Refactored to use centralized configuration
+- `commands/sell.py` - Improved validation and error handling
 - `pyproject.toml` - Updated with better metadata
 
 ## 🚀 Performance Improvements

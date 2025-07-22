@@ -26,8 +26,8 @@ I have successfully refactored and improved your Discord car trading bot while m
 ### Major Updates
 - **`main.py`** - Updated to use new configuration and logging systems
 - **`database_mysql.py`** - Enhanced with better error handling and connection management
-- **`command/utils.py`** - Refactored to use centralized configuration
-- **`command/sell.py`** - Improved validation and error handling
+- **`commands/utils.py`** - Refactored to use centralized configuration
+- **`commands/sell.py`** - Improved validation and error handling
 
 ## ✨ Key Improvements Implemented
 

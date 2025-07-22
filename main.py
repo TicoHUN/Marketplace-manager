@@ -9,6 +9,15 @@ from config import config
 from logger_config import get_logger, log_info, log_error, log_warning
 from validation import SecurityValidator
 
+# Import new security system
+try:
+    from security_system import SecurityMonitor, setup_security_monitoring
+    from commands.admin_security import setup_admin_security_commands
+    SECURITY_SYSTEM_AVAILABLE = True
+except ImportError:
+    SECURITY_SYSTEM_AVAILABLE = False
+    log_warning("Security system not available - running without ingame ID monitoring")
+
 # Import command modules
 from commands.utils import (
     private_channels_activity, private_channel_messages, 
@@ -176,6 +185,11 @@ async def on_ready():
         setup_utility_commands(tree)
         print("  - Utility commands setup (including close)")
 
+        # Setup admin security commands if available
+        if SECURITY_SYSTEM_AVAILABLE:
+            setup_admin_security_commands(tree)
+            print("  - Admin security commands setup")
+
         # Force sync commands
         print("Syncing commands with Discord...")
         try:
@@ -314,6 +328,11 @@ async def on_ready():
     except Exception as e:
         print(f'Error restoring data: {e}')
 
+    # Initialize security monitoring
+    if SECURITY_SYSTEM_AVAILABLE:
+        security_monitor = setup_security_monitoring()
+        print('Security monitoring system initialized')
+
     # Start background task
     try:
         bot.loop.create_task(check_inactive_channels())
@@ -349,6 +368,16 @@ async def on_message(message):
         if (message.channel.name.startswith('car-sale-') or message.channel.name.startswith('car-trade-') or
             message.channel.name.startswith('auction-deal-') or message.channel.name.startswith('giveaway-claim-') or
             message.channel.name.startswith('admin-giveaway-claim-')):
+            
+            # NEW SECURITY SYSTEM: Check for ingame ID mismatches
+            security_warning_sent = False
+            if SECURITY_SYSTEM_AVAILABLE:
+                try:
+                    security_warning_sent = await SecurityMonitor.check_message_for_id_mismatch(message)
+                except Exception as e:
+                    log_error(f"Error in security ID check: {e}", exc_info=True)
+            
+            # Original risky content detection
             dm_flags, payment_flags = SecurityValidator.check_risky_content(message.content)
 
             if dm_flags or payment_flags:
@@ -368,9 +397,10 @@ async def on_message(message):
 
             private_channel_messages[message.channel.id].append({
                 'message': message,
-                'flagged': bool(dm_flags or payment_flags),
+                'flagged': bool(dm_flags or payment_flags or security_warning_sent),
                 'dm_flags': dm_flags,
-                'payment_flags': payment_flags
+                'payment_flags': payment_flags,
+                'security_flagged': security_warning_sent
             })
         else:
             # Store normal messages for logging

@@ -58,6 +58,18 @@ except ImportError:
 # Global connection pool
 connection_pool = None
 
+# Add regex for ingame ID validation
+import re
+
+INGAME_ID_PATTERN = re.compile(r'^[A-Z]{2}\d{6}$')  # For validation (full string match)
+INGAME_ID_EXTRACT_PATTERN = re.compile(r'[A-Z]{2}\d{6}')  # For extraction (anywhere in text)
+
+def validate_ingame_id_format(ingame_id: str) -> bool:
+    """Validate ingame ID format (2 letters + 6 numbers)"""
+    if not ingame_id:
+        return False
+    return bool(INGAME_ID_PATTERN.match(ingame_id.upper()))
+
 def init_connection_pool():
     """Initialize the MySQL connection pool"""
     global connection_pool
@@ -360,6 +372,16 @@ def init_database():
                 username VARCHAR(255) NOT NULL,
                 message_id BIGINT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # User ingame IDs table - SECURITY SYSTEM
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_ingame_ids (
+                discord_id BIGINT PRIMARY KEY,
+                ingame_id VARCHAR(10) UNIQUE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             )
         ''')
 
@@ -1808,6 +1830,142 @@ def get_recent_price_logs(limit: int = 50) -> List[Dict]:
     finally:
         cursor.close()
         conn.close()
+
+# =============================================================================
+# INGAME ID SECURITY SYSTEM FUNCTIONS
+# =============================================================================
+
+def add_user_ingame_id(discord_id: int, ingame_id: str) -> bool:
+    """Add a user's ingame ID to the database"""
+    try:
+        with get_db_cursor() as (cursor, conn):
+            cursor.execute('''
+                INSERT INTO user_ingame_ids (discord_id, ingame_id)
+                VALUES (%s, %s)
+            ''', (discord_id, ingame_id.upper()))
+            logger.info(f"Added ingame ID {ingame_id} for user {discord_id}")
+            return True
+    except MySQLError as e:
+        if e.errno == 1062:  # Duplicate entry error
+            logger.warning(f"Attempted to add duplicate ingame ID {ingame_id} or discord ID {discord_id}")
+            return False
+        else:
+            logger.error(f"MySQL error adding ingame ID: {e}", exc_info=True)
+            return False
+    except Exception as e:
+        logger.error(f"Error adding ingame ID: {e}", exc_info=True)
+        return False
+
+def get_user_ingame_id(discord_id: int) -> Optional[str]:
+    """Get a user's ingame ID by Discord ID"""
+    try:
+        with get_db_cursor() as (cursor, conn):
+            cursor.execute('''
+                SELECT ingame_id FROM user_ingame_ids 
+                WHERE discord_id = %s
+            ''', (discord_id,))
+            result = cursor.fetchone()
+            return result['ingame_id'] if result else None
+    except Exception as e:
+        logger.error(f"Error getting ingame ID for user {discord_id}: {e}", exc_info=True)
+        return None
+
+def get_discord_by_ingame_id(ingame_id: str) -> Optional[int]:
+    """Get Discord ID by ingame ID"""
+    try:
+        with get_db_cursor() as (cursor, conn):
+            cursor.execute('''
+                SELECT discord_id FROM user_ingame_ids 
+                WHERE ingame_id = %s
+            ''', (ingame_id.upper(),))
+            result = cursor.fetchone()
+            return result['discord_id'] if result else None
+    except Exception as e:
+        logger.error(f"Error getting Discord ID for ingame ID {ingame_id}: {e}", exc_info=True)
+        return None
+
+def update_user_ingame_id(discord_id: int, new_ingame_id: str) -> bool:
+    """Update a user's ingame ID"""
+    try:
+        with get_db_cursor() as (cursor, conn):
+            cursor.execute('''
+                UPDATE user_ingame_ids 
+                SET ingame_id = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE discord_id = %s
+            ''', (new_ingame_id.upper(), discord_id))
+            
+            if cursor.rowcount > 0:
+                logger.info(f"Updated ingame ID to {new_ingame_id} for user {discord_id}")
+                return True
+            else:
+                logger.warning(f"No ingame ID found to update for user {discord_id}")
+                return False
+    except MySQLError as e:
+        if e.errno == 1062:  # Duplicate entry error
+            logger.warning(f"Attempted to update to duplicate ingame ID {new_ingame_id}")
+            return False
+        else:
+            logger.error(f"MySQL error updating ingame ID: {e}", exc_info=True)
+            return False
+    except Exception as e:
+        logger.error(f"Error updating ingame ID: {e}", exc_info=True)
+        return False
+
+def ingame_id_exists(ingame_id: str) -> bool:
+    """Check if an ingame ID already exists in the database"""
+    try:
+        with get_db_cursor() as (cursor, conn):
+            cursor.execute('''
+                SELECT COUNT(*) as count FROM user_ingame_ids 
+                WHERE ingame_id = %s
+            ''', (ingame_id.upper(),))
+            result = cursor.fetchone()
+            return result['count'] > 0 if result else False
+    except Exception as e:
+        logger.error(f"Error checking ingame ID existence: {e}", exc_info=True)
+        return False
+
+def delete_user_ingame_id(discord_id: int) -> bool:
+    """Delete a user's ingame ID"""
+    try:
+        with get_db_cursor() as (cursor, conn):
+            cursor.execute('''
+                DELETE FROM user_ingame_ids 
+                WHERE discord_id = %s
+            ''', (discord_id,))
+            
+            if cursor.rowcount > 0:
+                logger.info(f"Deleted ingame ID for user {discord_id}")
+                return True
+            else:
+                logger.warning(f"No ingame ID found to delete for user {discord_id}")
+                return False
+    except Exception as e:
+        logger.error(f"Error deleting ingame ID: {e}", exc_info=True)
+        return False
+
+def get_all_ingame_ids() -> List[Dict[str, Any]]:
+    """Get all ingame ID mappings (admin function)"""
+    try:
+        with get_db_cursor() as (cursor, conn):
+            cursor.execute('''
+                SELECT discord_id, ingame_id, created_at, updated_at 
+                FROM user_ingame_ids 
+                ORDER BY created_at DESC
+            ''')
+            return cursor.fetchall()
+    except Exception as e:
+        logger.error(f"Error getting all ingame IDs: {e}", exc_info=True)
+        return []
+
+def extract_ingame_ids_from_text(text: str) -> List[str]:
+    """Extract all potential ingame IDs from text"""
+    if not text:
+        return []
+    
+    # Find all matches using the extraction pattern (no anchors)
+    matches = INGAME_ID_EXTRACT_PATTERN.findall(text.upper())
+    return list(set(matches))  # Remove duplicates
 
 if __name__ == "__main__":
     init_connection_pool()

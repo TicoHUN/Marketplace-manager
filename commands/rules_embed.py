@@ -4,9 +4,20 @@ from discord.ui import View, Button
 from discord import ButtonStyle, Interaction
 import asyncio
 
+# Import the new security system
+try:
+    from security_system import IngameIDModal
+    from config import config
+    SECURITY_AVAILABLE = True
+except ImportError:
+    SECURITY_AVAILABLE = False
+    # Fallback configuration
+    class config:
+        MEMBER_ROLE_ID = 1394786020842799235
+
 # Configuration
 RULES_CHANNEL_ID = 1394800414104490147
-RULES_ROLE_ID = 1394786020842799235
+RULES_ROLE_ID = getattr(config, 'MEMBER_ROLE_ID', 1394786020842799235)
 
 class RulesReactionView(View):
     def __init__(self):
@@ -14,16 +25,31 @@ class RulesReactionView(View):
 
     @discord.ui.button(label='✅ I Accept the Rules', style=ButtonStyle.green, custom_id='accept_rules_button', emoji='✅')
     async def accept_rules_button(self, interaction: Interaction, button: Button):
-        role = interaction.guild.get_role(RULES_ROLE_ID)
-        if not role:
-            await interaction.response.send_message("Error: Rules role not found.", ephemeral=True)
+        # Check if user already has the member role
+        member_role = interaction.guild.get_role(RULES_ROLE_ID)
+        if not member_role:
+            await interaction.response.send_message("❌ Member role not found. Please contact an administrator.", ephemeral=True)
             return
 
-        # Check if user already has the role
-        if role in interaction.user.roles:
-            await interaction.response.send_message("You have already accepted the rules!", ephemeral=True)
+        if member_role in interaction.user.roles:
+            await interaction.response.send_message("✅ You have already accepted the rules and have access to the server!", ephemeral=True)
             return
 
+        # NEW SECURITY SYSTEM: Show ingame ID modal instead of immediately giving role
+        if SECURITY_AVAILABLE:
+            try:
+                modal = IngameIDModal()
+                await interaction.response.send_modal(modal)
+            except Exception as e:
+                print(f"Error showing ingame ID modal: {e}")
+                # Fallback to old behavior
+                await self._fallback_role_assignment(interaction, member_role)
+        else:
+            # Fallback to old behavior if security system not available
+            await self._fallback_role_assignment(interaction, member_role)
+
+    async def _fallback_role_assignment(self, interaction: Interaction, role: discord.Role):
+        """Fallback method for role assignment without security system"""
         try:
             await interaction.user.add_roles(role, reason="Accepted server rules")
             await interaction.response.send_message(
@@ -32,12 +58,12 @@ class RulesReactionView(View):
             )
         except discord.Forbidden:
             await interaction.response.send_message(
-                "Error: Bot doesn't have permission to assign roles.",
+                "❌ Bot doesn't have permission to assign roles. Please contact an administrator.",
                 ephemeral=True
             )
         except Exception as e:
             await interaction.response.send_message(
-                f"An error occurred: {str(e)}",
+                f"❌ An error occurred: {str(e)}",
                 ephemeral=True
             )
 

@@ -49,6 +49,7 @@ def setup_admin_security_commands(tree: app_commands.CommandTree):
         user="The user whose ingame ID to change",
         new_id="The new ingame ID (format: 2 letters + 6 numbers, e.g., RC463713)"
     )
+    @app_commands.default_permissions(administrator=True)
     async def changeid_command(interaction: Interaction, user: discord.Member, new_id: str):
         """Change a user's ingame ID (admin only)"""
         
@@ -147,6 +148,7 @@ def setup_admin_security_commands(tree: app_commands.CommandTree):
     
     @tree.command(name="viewid", description="[ADMIN] View a user's ingame ID")
     @app_commands.describe(user="The user whose ingame ID to view")
+    @app_commands.default_permissions(administrator=True)
     async def viewid_command(interaction: Interaction, user: discord.Member):
         """View a user's ingame ID (admin only)"""
         
@@ -189,6 +191,7 @@ def setup_admin_security_commands(tree: app_commands.CommandTree):
             )
     
     @tree.command(name="listids", description="[ADMIN] List all registered ingame IDs")
+    @app_commands.default_permissions(administrator=True)
     async def listids_command(interaction: Interaction):
         """List all registered ingame IDs (admin only)"""
         
@@ -247,6 +250,7 @@ def setup_admin_security_commands(tree: app_commands.CommandTree):
     
     @tree.command(name="deleteid", description="[ADMIN] Remove a user's ingame ID")
     @app_commands.describe(user="The user whose ingame ID to remove")
+    @app_commands.default_permissions(administrator=True)
     async def deleteid_command(interaction: Interaction, user: discord.Member):
         """Remove a user's ingame ID (admin only)"""
         

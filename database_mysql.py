@@ -196,6 +196,10 @@ def execute_query(query, params=None, fetch=None):
                 result = cursor.fetchall()
             else:
                 result = None
+                # For SELECT queries without fetch parameter, consume results to prevent "unread result" errors
+                if query.strip().upper().startswith('SELECT'):
+                    cursor.fetchall()  # Consume any results
+                    logger.warning(f"SELECT query executed without fetch parameter: {query[:50]}...")
 
             return result
     except Exception as e:
@@ -686,23 +690,31 @@ def update_deal_confirmation(channel_id: int, buyer_confirmed: bool = None, sell
 
 def get_all_deal_confirmations() -> Dict[int, Dict]:
     """Get all deal confirmations in the format expected by the old system"""
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    if not MYSQL_AVAILABLE:
+        logger.warning("MySQL not available, returning empty deal confirmations")
+        return {}
+    
     try:
-        cursor.execute('SELECT * FROM deal_confirmations')
-        confirmations = cursor.fetchall()
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute('SELECT * FROM deal_confirmations')
+            confirmations = cursor.fetchall()
 
-        deal_confirmations = {}
-        for confirmation in confirmations:
-            deal_confirmations[confirmation['channel_id']] = {
-                'buyer_confirmed': confirmation['buyer_confirmed'],
-                'seller_confirmed': confirmation['seller_confirmed']
-            }
+            deal_confirmations = {}
+            for confirmation in confirmations:
+                deal_confirmations[confirmation['channel_id']] = {
+                    'buyer_confirmed': confirmation['buyer_confirmed'],
+                    'seller_confirmed': confirmation['seller_confirmed']
+                }
 
-        return deal_confirmations
-    finally:
-        cursor.close()
-        conn.close()
+            return deal_confirmations
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        logger.error(f"Error getting all deal confirmations: {e}", exc_info=True)
+        return {}
 
 def remove_deal_confirmation(channel_id: int):
     """Remove deal confirmation entry"""
@@ -733,20 +745,7 @@ def add_deal_confirmation(channel_id: int, buyer_confirmed: bool = False, seller
         print(f"Error adding deal confirmation: {e}")
         raise e
 
-def get_all_deal_confirmations():
-    """Get all deal confirmations"""
-    try:
-        results = execute_query('SELECT channel_id, buyer_confirmed, seller_confirmed FROM deal_confirmations')
-        confirmations = {}
-        for row in results:
-            confirmations[row[0]] = {
-                "buyer_confirmed": row[1],
-                "seller_confirmed": row[2]
-            }
-        return confirmations
-    except Exception as e:
-        print(f"Error getting all deal confirmations: {e}")
-        return {}
+
 
 # Auction Functions
 def add_active_auction(auction_data: Dict):

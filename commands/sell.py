@@ -21,7 +21,7 @@ try:
 except ImportError:
     # Fallback for backward compatibility
     SELL_CHANNEL_ID = config.SELL_CHANNEL_ID
-SELL_TRADE_CHANNEL_ID = config.SELL_TRADE_CHANNEL_ID
+    SELL_TRADE_CHANNEL_ID = config.SELL_TRADE_CHANNEL_ID
     class config:
         SELL_CHANNEL_ID = SELL_CHANNEL_ID
         SELL_TRADE_CHANNEL_ID = SELL_TRADE_CHANNEL_ID
@@ -775,7 +775,7 @@ async def handle_buy_button(bot, interaction):
 
     # Create a private channel for the transaction
     guild = interaction.guild
-            member_role = guild.get_role(config.MEMBER_ROLE_ID)  # Member role
+    member_role = guild.get_role(config.MEMBER_ROLE_ID)  # Member role
     overwrites = {
         guild.default_role: discord.PermissionOverwrite(read_messages=False),
         seller: discord.PermissionOverwrite(read_messages=True, send_messages=True, attach_files=True, embed_links=True),

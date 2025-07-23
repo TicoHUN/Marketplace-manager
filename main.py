@@ -708,10 +708,12 @@ async def handle_relist_command(interaction: discord.Interaction):
                 new_embed.set_footer(text=f'Listed by {interaction.user.display_name}', icon_url=interaction.user.avatar.url if interaction.user.avatar else None)
                 new_embed.timestamp = discord.utils.utcnow()
 
-                # Create view with buy button
+                # Create view with buy and make offer buttons
                 view = discord.ui.View()
                 buy_button = discord.ui.Button(label='Buy Car', style=discord.ButtonStyle.green, custom_id=f'buy_car_{user_id}')
+                offer_button = discord.ui.Button(label='Make Offer', style=discord.ButtonStyle.blurple, custom_id=f'make_offer_{user_id}')
                 view.add_item(buy_button)
+                view.add_item(offer_button)
                 new_listing_type = 'sell'
 
             elif original_listing_type == 'trade':

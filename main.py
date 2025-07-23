@@ -1207,11 +1207,32 @@ def setup_utility_commands(tree):
 
         try:
             # Get all car listings from database
-            from database_mysql import get_all_car_listings
+            from database_mysql import get_all_car_listings, MYSQL_AVAILABLE
+            
+            if not MYSQL_AVAILABLE:
+                await interaction.followup.send(
+                    "❌ **Database Connection Issue**\n\n"
+                    "The MySQL database is not available. This could mean:\n"
+                    "• Database server is not running\n"
+                    "• Connection credentials are incorrect\n"
+                    "• Network connectivity issues\n\n"
+                    "Please check the bot's database configuration.",
+                    ephemeral=True
+                )
+                return
+            
             car_listings = get_all_car_listings()
 
             if not car_listings:
-                await interaction.followup.send("No car listings found in the database.", ephemeral=True)
+                await interaction.followup.send(
+                    "📝 **No Car Listings Found**\n\n"
+                    "The database is connected but contains no car listings. This could mean:\n"
+                    "• The bot hasn't processed any car listings yet\n"
+                    "• The car_listings table is empty\n"
+                    "• Cars haven't been added to the recognition system\n\n"
+                    "Try posting some sell/trade listings first to populate the database.",
+                    ephemeral=True
+                )
                 return
 
             # Format the car listings

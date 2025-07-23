@@ -14,9 +14,22 @@ try:
 except ImportError:
     MYSQL_AVAILABLE = False
     # Create mock classes for testing
+    class MockConnection:
+        def cursor(self, dictionary=False):
+            return MockCursor()
+        def commit(self): pass
+        def rollback(self): pass
+        def close(self): pass
+    
+    class MockCursor:
+        def execute(self, query, params=None): pass
+        def fetchone(self): return None
+        def fetchall(self): return []
+        def close(self): pass
+    
     class mysql:
         connector = type('connector', (), {
-            'connect': lambda **kwargs: None,
+            'connect': lambda **kwargs: MockConnection(),
             'Error': Exception
         })()
     
@@ -25,7 +38,7 @@ except ImportError:
             def __init__(self, **kwargs):
                 pass
             def get_connection(self):
-                return None
+                return MockConnection()
     
     MySQLError = Exception
 
@@ -1358,15 +1371,23 @@ def count_car_models():
 
 def get_all_car_listings():
     """Get all car listings from the car_listings table"""
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    if not MYSQL_AVAILABLE:
+        logger.warning("MySQL not available, returning empty car listings")
+        return []
+    
     try:
-        cursor.execute('SELECT * FROM car_listings ORDER BY car_name')
-        results = cursor.fetchall()
-        return results
-    finally:
-        cursor.close()
-        conn.close()
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute('SELECT * FROM car_listings ORDER BY car_name')
+            results = cursor.fetchall()
+            return results
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        logger.error(f"Error getting car listings: {e}", exc_info=True)
+        return []
 
 def resolve_car_shortcode(input_name):
     """Resolve a car shortcode to its full display name"""
@@ -1754,65 +1775,81 @@ def extract_numeric_price(price_text: str) -> int:
 
 def get_car_price_logs(car_name: str = None, limit: int = 100) -> List[Dict]:
     """Get car price logs, optionally filtered by car name"""
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    if not MYSQL_AVAILABLE:
+        logger.warning("MySQL not available, returning empty price logs")
+        return []
+    
     try:
-        if car_name:
-            cursor.execute('''
-                SELECT * FROM car_price_logs 
-                WHERE car_name = %s 
-                ORDER BY created_at DESC 
-                LIMIT %s
-            ''', (car_name, limit))
-        else:
-            cursor.execute('''
-                SELECT * FROM car_price_logs 
-                ORDER BY created_at DESC 
-                LIMIT %s
-            ''', (limit,))
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            if car_name:
+                cursor.execute('''
+                    SELECT * FROM car_price_logs 
+                    WHERE car_name = %s 
+                    ORDER BY created_at DESC 
+                    LIMIT %s
+                ''', (car_name, limit))
+            else:
+                cursor.execute('''
+                    SELECT * FROM car_price_logs 
+                    ORDER BY created_at DESC 
+                    LIMIT %s
+                ''', (limit,))
 
-        results = cursor.fetchall()
-        return results
-    finally:
-        cursor.close()
-        conn.close()
+            results = cursor.fetchall()
+            return results
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        logger.error(f"Error getting car price logs: {e}", exc_info=True)
+        return []
 
 def get_car_price_stats(car_name: str = None) -> List[Dict]:
     """Get price statistics for cars"""
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    if not MYSQL_AVAILABLE:
+        logger.warning("MySQL not available, returning empty price stats")
+        return []
+    
     try:
-        if car_name:
-            cursor.execute('''
-                SELECT 
-                    car_name,
-                    COUNT(*) as listing_count,
-                    AVG(price_numeric) as avg_price,
-                    MIN(price_numeric) as min_price,
-                    MAX(price_numeric) as max_price
-                FROM car_price_logs 
-                WHERE car_name = %s AND price_numeric IS NOT NULL
-                GROUP BY car_name
-            ''', (car_name,))
-        else:
-            cursor.execute('''
-                SELECT 
-                    car_name,
-                    COUNT(*) as listing_count,
-                    AVG(price_numeric) as avg_price,
-                    MIN(price_numeric) as min_price,
-                    MAX(price_numeric) as max_price
-                FROM car_price_logs 
-                WHERE price_numeric IS NOT NULL
-                GROUP BY car_name
-                ORDER BY listing_count DESC
-            ''')
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            if car_name:
+                cursor.execute('''
+                    SELECT 
+                        car_name,
+                        COUNT(*) as listing_count,
+                        AVG(price_numeric) as avg_price,
+                        MIN(price_numeric) as min_price,
+                        MAX(price_numeric) as max_price
+                    FROM car_price_logs 
+                    WHERE car_name = %s AND price_numeric IS NOT NULL
+                    GROUP BY car_name
+                ''', (car_name,))
+            else:
+                cursor.execute('''
+                    SELECT 
+                        car_name,
+                        COUNT(*) as listing_count,
+                        AVG(price_numeric) as avg_price,
+                        MIN(price_numeric) as min_price,
+                        MAX(price_numeric) as max_price
+                    FROM car_price_logs 
+                    WHERE price_numeric IS NOT NULL
+                    GROUP BY car_name
+                    ORDER BY listing_count DESC
+                ''')
 
-        results = cursor.fetchall()
-        return results
-    finally:
-        cursor.close()
-        conn.close()
+            results = cursor.fetchall()
+            return results
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        logger.error(f"Error getting car price stats: {e}", exc_info=True)
+        return []
 
 def get_recent_price_logs(limit: int = 50) -> List[Dict]:
     """Get recent price logs across all cars"""

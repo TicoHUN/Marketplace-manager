@@ -322,6 +322,156 @@ def setup_admin_security_commands(tree: app_commands.CommandTree):
                 ephemeral=True
             )
 
+    @tree.command(name="carprices", description="[ADMIN] Show price statistics for all cars")
+    @app_commands.describe(car_name="Specific car to show prices for (optional)")
+    @app_commands.default_permissions(administrator=True)
+    async def carprices_command(interaction: Interaction, car_name: Optional[str] = None):
+        """Show car price statistics (admin only)"""
+        
+        # Check admin permissions
+        if not interaction.user.guild_permissions.administrator:
+            await interaction.response.send_message(
+                "❌ This command requires administrator permissions.",
+                ephemeral=True
+            )
+            return
+        
+        await interaction.response.defer(ephemeral=True)
+        
+        try:
+            # Import the database functions
+            try:
+                from database_mysql import get_car_price_stats, get_car_price_logs
+            except ImportError:
+                await interaction.followup.send(
+                    "❌ Database functions not available for price statistics.",
+                    ephemeral=True
+                )
+                return
+            
+            if car_name:
+                # Show detailed stats for specific car
+                car_name = car_name.strip()
+                stats = get_car_price_stats(car_name)
+                recent_logs = get_car_price_logs(car_name, limit=10)
+                
+                if not stats:
+                    embed = discord.Embed(
+                        title="❌ No Price Data Found",
+                        description=f"No price data found for **{car_name}**.\n\n"
+                                   f"This could mean:\n"
+                                   f"• No sell listings have been posted for this car\n"
+                                   f"• The car name doesn't match database records\n"
+                                   f"• Price logging is not working properly",
+                        color=discord.Color.orange()
+                    )
+                    await interaction.followup.send(embed=embed, ephemeral=True)
+                    return
+                
+                stat = stats[0]
+                embed = discord.Embed(
+                    title=f"💰 Price Statistics: {stat['car_name']}",
+                    color=discord.Color.blue()
+                )
+                
+                # Add main statistics
+                embed.add_field(
+                    name="📊 **Price Statistics**",
+                    value=f"**Total Listings:** {stat['listing_count']}\n"
+                          f"**Average Price:** ${stat['avg_price']:,.0f}\n"
+                          f"**Lowest Price:** ${stat['min_price']:,.0f}\n"
+                          f"**Highest Price:** ${stat['max_price']:,.0f}",
+                    inline=False
+                )
+                
+                # Add recent listings
+                if recent_logs:
+                    recent_prices = []
+                    for log in recent_logs[:5]:  # Show last 5
+                        price_display = f"${log['price_numeric']:,.0f}" if log['price_numeric'] else log['price_text']
+                        date = log['created_at'].strftime("%m/%d/%y")
+                        recent_prices.append(f"• {price_display} ({date})")
+                    
+                    embed.add_field(
+                        name="🕒 **Recent Listings**",
+                        value="\n".join(recent_prices),
+                        inline=False
+                    )
+                
+                embed.set_footer(text=f"Requested by {interaction.user.display_name}")
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                
+            else:
+                # Show summary for all cars
+                all_stats = get_car_price_stats()
+                
+                if not all_stats:
+                    embed = discord.Embed(
+                        title="❌ No Price Data Found",
+                        description="No price data found in the database.\n\n"
+                                   "This could mean:\n"
+                                   "• No sell listings have been posted yet\n"
+                                   "• Price logging is not working properly\n"
+                                   "• Database connection issues",
+                        color=discord.Color.orange()
+                    )
+                    embed.add_field(
+                        name="💡 **Troubleshooting**",
+                        value="Check if sell listings are being posted and if the price logging is working in the sell command.",
+                        inline=False
+                    )
+                    await interaction.followup.send(embed=embed, ephemeral=True)
+                    return
+                
+                # Create summary embed
+                embed = discord.Embed(
+                    title="💰 Car Price Statistics Summary",
+                    description=f"Price data for {len(all_stats)} cars with recorded listings",
+                    color=discord.Color.green()
+                )
+                
+                # Sort by most listed cars and show top 15
+                top_cars = all_stats[:15]
+                
+                car_list = []
+                for stat in top_cars:
+                    avg_price = f"${stat['avg_price']:,.0f}" if stat['avg_price'] else "N/A"
+                    car_list.append(
+                        f"**{stat['car_name']}** — {stat['listing_count']} listings (avg: {avg_price})"
+                    )
+                
+                embed.add_field(
+                    name="📊 **Top Cars by Listing Count**",
+                    value="\n".join(car_list),
+                    inline=False
+                )
+                
+                # Add summary stats
+                total_listings = sum(stat['listing_count'] for stat in all_stats)
+                cars_with_data = len(all_stats)
+                
+                embed.add_field(
+                    name="📈 **Overall Statistics**",
+                    value=f"**Total Cars:** {cars_with_data}\n"
+                          f"**Total Listings:** {total_listings}\n"
+                          f"**Average per Car:** {total_listings/cars_with_data:.1f}",
+                    inline=True
+                )
+                
+                if len(all_stats) > 15:
+                    embed.set_footer(text=f"Showing top 15 of {len(all_stats)} cars • Use /carprices <car_name> for detailed stats")
+                else:
+                    embed.set_footer(text="Use /carprices <car_name> for detailed stats on a specific car")
+                
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                
+        except Exception as e:
+            log_error(f"Error in carprices command: {e}", exc_info=True)
+            await interaction.followup.send(
+                "❌ An error occurred while retrieving car price statistics.",
+                ephemeral=True
+            )
+
     log_info("Admin security commands setup complete")
 
 # Export the setup function

@@ -5,6 +5,7 @@ import asyncio
 import uuid
 import random
 from datetime import datetime, timedelta
+from config import config
 from .utils import (
     listing_timeout, save_image_to_bot_channel, send_security_notice,
     private_channels_activity

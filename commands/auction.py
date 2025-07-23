@@ -19,8 +19,8 @@ from database_mysql import (
 from .car_disambiguation import handle_car_disambiguation
 
 # Channel IDs
-AUCTION_CHANNEL_ID = 1394786069534216353  # ID for #make-auction channel
-AUCTION_FORUM_ID = 1394800803197354014  # ID for #auction-house forum channel
+AUCTION_CHANNEL_ID = config.AUCTION_CHANNEL_ID  # ID for #make-auction channel
+AUCTION_FORUM_ID = config.AUCTION_FORUM_ID  # ID for #auction-house forum channel
 
 class AuctionConfirmationView(discord.ui.View):
     """Persistent view for auction accept/reject buttons"""
@@ -951,7 +951,7 @@ async def handle_auction_accept(bot, interaction, auction_id):
             return
 
         # Create private channel for the deal
-        member_role = guild.get_role(1394786020842799235)  # Member role from rules
+        member_role = guild.get_role(config.MEMBER_ROLE_ID)  # Member role from rules
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(read_messages=False),
             seller: discord.PermissionOverwrite(read_messages=True, send_messages=True, attach_files=True, embed_links=True),
@@ -1221,7 +1221,7 @@ async def handle_auction_reject(bot, interaction, auction_id):
 async def post_to_ended_auctions_thread(bot, auction, seller_name, winner_name):
     """Post accepted auction to ended auctions thread"""
     try:
-        ENDED_AUCTIONS_THREAD_ID = 1394800931748581597
+        ENDED_AUCTIONS_THREAD_ID = config.ENDED_AUCTIONS_THREAD_ID
         thread = bot.get_channel(ENDED_AUCTIONS_THREAD_ID)
 
         if not thread:
@@ -1247,7 +1247,7 @@ async def post_to_ended_auctions_thread(bot, auction, seller_name, winner_name):
 async def post_no_bids_to_ended_auctions_thread(bot, auction, seller_name):
     """Post no-bids auction to ended auctions thread"""
     try:
-        ENDED_AUCTIONS_THREAD_ID = 1394800931748581597
+        ENDED_AUCTIONS_THREAD_ID = config.ENDED_AUCTIONS_THREAD_ID
         thread = bot.get_channel(ENDED_AUCTIONS_THREAD_ID)
 
         if not thread:
@@ -2121,7 +2121,7 @@ async def handle_auction_accept(bot, interaction, auction_id):
             return
 
         # Create private channel for the deal
-        member_role = guild.get_role(1394786020842799235)  # Member role from rules
+        member_role = guild.get_role(config.MEMBER_ROLE_ID)  # Member role from rules
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(read_messages=False),
             seller: discord.PermissionOverwrite(read_messages=True, send_messages=True, attach_files=True, embed_links=True),

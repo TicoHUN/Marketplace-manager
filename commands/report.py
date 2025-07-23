@@ -2,13 +2,14 @@ import discord
 from discord.ui import Modal, TextInput, View, Button
 from discord import app_commands, Interaction, TextStyle, ButtonStyle
 import asyncio
+from config import config
 
 # Import database functions
 from database_mysql import add_report_ticket
 from .utils import private_channels_activity, log_channel_messages
 
 # Channel IDs
-SUPPORT_CHANNEL_ID = 1394786056699641977  # ID for #support channel
+SUPPORT_CHANNEL_ID = config.SUPPORT_CHANNEL_ID  # ID for #support channel
 
 class ReportChannelView(discord.ui.View):
     """View for report channel close button"""

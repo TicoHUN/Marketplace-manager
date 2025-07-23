@@ -50,8 +50,8 @@ try:
     from validation import SecurityValidator
 except ImportError:
     # Fallback for backward compatibility
-    BOT_CHANNEL_ID = 1394786046109024428
-    TRADELOG_CHANNEL_ID = 1394786041243762729
+    BOT_CHANNEL_ID = config.BOT_CHANNEL_ID
+    TRADELOG_CHANNEL_ID = config.TRADELOG_CHANNEL_ID
     IMAGE_UPLOAD_TIMEOUT = 90
     
     class config:

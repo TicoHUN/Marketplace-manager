@@ -34,7 +34,7 @@ def test_configuration_system():
         config.validate()
         
         # Test specific values
-        assert config.SELL_CHANNEL_ID == 1394786079995072704
+        assert config.SELL_CHANNEL_ID == 1390752480933052506
         assert config.IMAGE_UPLOAD_TIMEOUT == 90
         assert config.MAX_USER_LISTINGS == 3
         
@@ -307,8 +307,8 @@ def test_backward_compatibility():
         from config import config
         
         # Test that configuration values match expected values
-        assert config.SELL_CHANNEL_ID == 1394786079995072704
-        assert config.TRADE_CHANNEL_ID == 1394786078552227861
+        assert config.SELL_CHANNEL_ID == 1390752480933052506
+        assert config.TRADE_CHANNEL_ID == 1390752375899426836
         assert config.IMAGE_UPLOAD_TIMEOUT == 90
         
         # Test that database functions exist (even if they don't work without MySQL)

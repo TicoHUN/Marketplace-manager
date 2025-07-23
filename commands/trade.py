@@ -2,6 +2,7 @@ import discord
 from discord.ui import Modal, TextInput, View, Button
 from discord import app_commands, Interaction, TextStyle, ButtonStyle
 import asyncio
+from config import config
 from .utils import (
     listing_timeout, save_image_to_bot_channel,
     send_security_notice, private_channels_activity
@@ -14,8 +15,8 @@ from database_mysql import (
 from .car_disambiguation import handle_car_disambiguation
 
 # Channel IDs
-TRADE_CHANNEL_ID = 1394786078552227861 # ID for #trade-cars channel
-SELL_TRADE_CHANNEL_ID = 1394786077180694529  # ID for #make-sell-trade channel
+TRADE_CHANNEL_ID = config.TRADE_CHANNEL_ID # ID for #trade-cars channel
+SELL_TRADE_CHANNEL_ID = config.SELL_TRADE_CHANNEL_ID  # ID for #make-sell-trade channel
 
 # Pending listings are now handled by the database
 
@@ -422,7 +423,7 @@ class TradeOfferResponseView(discord.ui.View):
                 await interaction.followup.send("Could not create deal channel - users not in same server.", ephemeral=True)
                 return
 
-            member_role = guild.get_role(1394786020842799235)  # Member role
+            member_role = guild.get_role(config.MEMBER_ROLE_ID)  # Member role
             overwrites = {
                 guild.default_role: discord.PermissionOverwrite(read_messages=False),
                 interaction.user: discord.PermissionOverwrite(read_messages=True, send_messages=True, attach_files=True, embed_links=True),
@@ -601,7 +602,7 @@ async def handle_trade_button(bot, interaction):
 
     # Create a private channel for the transaction
     guild = interaction.guild
-    member_role = guild.get_role(1394786020842799235)  # Member role
+    member_role = guild.get_role(config.MEMBER_ROLE_ID)  # Member role
     overwrites = {
         guild.default_role: discord.PermissionOverwrite(read_messages=False),
         trader: discord.PermissionOverwrite(read_messages=True, send_messages=True, attach_files=True, embed_links=True),

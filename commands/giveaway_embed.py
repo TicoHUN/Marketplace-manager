@@ -2,10 +2,11 @@
 import discord
 from discord.ui import View, Button
 from discord import Interaction, ButtonStyle
+from config import config
 from .giveaway import GiveawayModal
 
 # Channel ID for the giveaway channel
-GIVEAWAY_CHANNEL_ID = 1394786061540130879
+GIVEAWAY_CHANNEL_ID = config.GIVEAWAY_CHANNEL_ID
 
 class GiveawayButtonView(View):
     def __init__(self):

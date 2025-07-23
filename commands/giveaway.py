@@ -5,6 +5,7 @@ import asyncio
 import uuid
 import random
 from datetime import datetime, timedelta
+from config import config
 from .utils import (
     listing_timeout, save_image_to_bot_channel, private_channels_activity, 
     send_security_notice
@@ -81,9 +82,9 @@ class JoinGiveawayView(discord.ui.View):
             )
 
 # Channel IDs
-GIVEAWAY_CHANNEL_ID = 1394786061540130879 # ID for #make-giveaway channel
-GIVEAWAYS_CHANNEL_ID = 1394786059635654817 # ID for #giveaways channel
-GIVEAWAY_REVIEW_ID = 1394786040438587503 # ID for #giveaway-review channel
+GIVEAWAY_CHANNEL_ID = config.GIVEAWAY_CHANNEL_ID # ID for #make-giveaway channel
+GIVEAWAYS_CHANNEL_ID = config.GIVEAWAYS_CHANNEL_ID # ID for #giveaways channel
+GIVEAWAY_REVIEW_ID = config.GIVEAWAY_REVIEW_ID # ID for #giveaway-review channel
 
 class GiveawayModal(Modal, title='Create Giveaway'):
     car_name = TextInput(

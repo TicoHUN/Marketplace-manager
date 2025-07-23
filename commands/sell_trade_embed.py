@@ -2,11 +2,12 @@
 import discord
 from discord.ui import View, Button
 from discord import Interaction, ButtonStyle
+from config import config
 from .sell import SellModal
 from .trade import TradeModal
 
 # Channel ID for the sell/trade channel
-SELL_TRADE_CHANNEL_ID = 1394786077180694529
+SELL_TRADE_CHANNEL_ID = config.SELL_TRADE_CHANNEL_ID
 
 class SellTradeButtonView(View):
     def __init__(self):

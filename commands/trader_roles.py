@@ -7,15 +7,15 @@ from typing import Dict, List, Optional, Tuple
 
 # Trader role configuration - easily adjustable
 TRADER_ROLES = [
-    {"name": "New Trader", "threshold": 1, "role_id": 1395188236967481515},
-    {"name": "Junior Trader", "threshold": 5, "role_id": 1395188500818558976},
-    {"name": "Skilled Trader", "threshold": 10, "role_id": 1395188647283916900},
-    {"name": "Verified Trader", "threshold": 20, "role_id": 1395188894160650371},
-    {"name": "Trusted Trader", "threshold": 35, "role_id": 1395189106052694116},
-    {"name": "Pro Trader", "threshold": 50, "role_id": 1395189318737465466},
-    {"name": "Elite Trader", "threshold": 75, "role_id": 1395189499923005450},
-    {"name": "Prime Trader", "threshold": 100, "role_id": 1395189718983114782},
-    {"name": "Legend Trader", "threshold": 150, "role_id": 1395190134718337044},
+    {"name": "New Trader", "threshold": 1, "role_id": 1395885984503173141},
+    {"name": "Junior Trader", "threshold": 5, "role_id": 1395886110592471040},
+    {"name": "Skilled Trader", "threshold": 10, "role_id": 1395886367057379438},
+    {"name": "Verified Trader", "threshold": 20, "role_id": 1395886518991720639},
+    {"name": "Trusted Trader", "threshold": 35, "role_id": 1395886624151306370},
+    {"name": "Pro Trader", "threshold": 50, "role_id": 1395886803344687125},
+    {"name": "Elite Trader", "threshold": 75, "role_id": 1395887021784043623},
+    {"name": "Prime Trader", "threshold": 100, "role_id": 1395887216600809544},
+    {"name": "Legend Trader", "threshold": 150, "role_id": 1395887415306227763},
 ]
 
 # Sort roles by threshold (highest first) for efficient checking

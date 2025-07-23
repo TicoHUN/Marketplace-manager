@@ -20,8 +20,8 @@ try:
     logger = get_logger("sell")
 except ImportError:
     # Fallback for backward compatibility
-    SELL_CHANNEL_ID = 1394786079995072704
-    SELL_TRADE_CHANNEL_ID = 1394786077180694529
+    SELL_CHANNEL_ID = config.SELL_CHANNEL_ID
+SELL_TRADE_CHANNEL_ID = config.SELL_TRADE_CHANNEL_ID
     class config:
         SELL_CHANNEL_ID = SELL_CHANNEL_ID
         SELL_TRADE_CHANNEL_ID = SELL_TRADE_CHANNEL_ID
@@ -203,7 +203,7 @@ class OfferResponseView(discord.ui.View):
                 await interaction.followup.send("Could not create deal channel - users not in same server.", ephemeral=True)
                 return
 
-            member_role = guild.get_role(1394786020842799235)  # Member role
+            member_role = guild.get_role(config.MEMBER_ROLE_ID)  # Member role
             overwrites = {
                 guild.default_role: discord.PermissionOverwrite(read_messages=False),
                 interaction.user: discord.PermissionOverwrite(read_messages=True, send_messages=True, attach_files=True, embed_links=True),
@@ -775,7 +775,7 @@ async def handle_buy_button(bot, interaction):
 
     # Create a private channel for the transaction
     guild = interaction.guild
-    member_role = guild.get_role(1394786020842799235)  # Member role
+            member_role = guild.get_role(config.MEMBER_ROLE_ID)  # Member role
     overwrites = {
         guild.default_role: discord.PermissionOverwrite(read_messages=False),
         seller: discord.PermissionOverwrite(read_messages=True, send_messages=True, attach_files=True, embed_links=True),

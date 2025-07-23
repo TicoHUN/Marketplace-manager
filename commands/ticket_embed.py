@@ -3,6 +3,7 @@ import discord
 from discord.ui import Modal, TextInput, View, Button
 from discord import app_commands, Interaction, TextStyle, ButtonStyle
 import asyncio
+from config import config
 from .utils import private_channels_activity
 import sys
 import os
@@ -10,7 +11,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database_mysql import add_support_ticket, add_report_ticket
 
 # Channel ID for the support channel
-SUPPORT_CHANNEL_ID = 1394786056699641977
+SUPPORT_CHANNEL_ID = config.SUPPORT_CHANNEL_ID
 
 class SupportModal(Modal, title='Request Support'):
     help_needed = TextInput(

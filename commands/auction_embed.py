@@ -2,10 +2,11 @@
 import discord
 from discord.ui import View, Button
 from discord import Interaction, ButtonStyle
+from config import config
 from .auction import AuctionModal
 
 # Channel ID for the auction channel
-AUCTION_CHANNEL_ID = 1394786069534216353
+AUCTION_CHANNEL_ID = config.AUCTION_CHANNEL_ID
 
 class AuctionButtonView(View):
     def __init__(self):

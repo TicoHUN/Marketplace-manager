@@ -36,7 +36,7 @@ try:
 except ImportError:
     # Fallback for testing
     class config:
-        MEMBER_ROLE_ID = 1394786020842799235
+        MEMBER_ROLE_ID = config.MEMBER_ROLE_ID
     
     def log_info(msg, module=None): print(f"INFO: {msg}")
     def log_error(msg, module=None, exc_info=False): print(f"ERROR: {msg}")

@@ -2,6 +2,7 @@ import discord
 from discord.ui import Modal, TextInput, View, Button
 from discord import app_commands, Interaction, TextStyle, ButtonStyle
 import asyncio
+from config import config
 
 # Import database functions
 from database_mysql import add_support_ticket
@@ -9,7 +10,7 @@ from .utils import private_channels_activity, log_channel_messages
 
 
 # Channel IDs
-SUPPORT_CHANNEL_ID = 1394786056699641977  # ID for #support channel
+SUPPORT_CHANNEL_ID = config.SUPPORT_CHANNEL_ID  # ID for #support channel
 
 class SupportChannelView(discord.ui.View):
     """View for support channel close button"""
@@ -68,7 +69,7 @@ class SupportModal(Modal, title='Request Support'):
     async def on_submit(self, interaction: Interaction):
         # Create a private support channel
         guild = interaction.guild
-        member_role = guild.get_role(1394786020842799235)  # Member role from rules
+        member_role = guild.get_role(config.MEMBER_ROLE_ID)  # Member role from rules
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(read_messages=False),
             interaction.user: discord.PermissionOverwrite(read_messages=True, send_messages=True, attach_files=True, embed_links=True),

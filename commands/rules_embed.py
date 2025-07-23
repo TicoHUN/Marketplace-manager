@@ -13,11 +13,12 @@ except ImportError:
     SECURITY_AVAILABLE = False
     # Fallback configuration
     class config:
-        MEMBER_ROLE_ID = 1394786020842799235
+        MEMBER_ROLE_ID = 1392239599496990791
+        RULES_CHANNEL_ID = 1390745679646818457
 
 # Configuration
-RULES_CHANNEL_ID = 1394800414104490147
-RULES_ROLE_ID = getattr(config, 'MEMBER_ROLE_ID', 1394786020842799235)
+RULES_CHANNEL_ID = config.RULES_CHANNEL_ID
+RULES_ROLE_ID = config.MEMBER_ROLE_ID
 
 class RulesReactionView(View):
     def __init__(self):

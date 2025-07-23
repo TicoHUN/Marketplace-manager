@@ -59,7 +59,6 @@ class MakeOfferModal(Modal, title='Make an Offer'):
         self.car_name = car_name
         self.listing_message_id = listing_message_id
 
-    @handle_errors()
     async def on_submit(self, interaction: Interaction):
         try:
             # Validate offered price using new validation system

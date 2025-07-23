@@ -493,8 +493,6 @@ def record_sale(seller_id: int) -> int:
 
         if result:
             new_count = result['sales'] + 1
-            # Debug logging to catch the bug
-            logger.info(f"Updating sales for user {seller_id}: {result['sales']} -> {new_count}")
             cursor.execute('''
                 UPDATE sales_data SET sales = %s, updated_at = CURRENT_TIMESTAMP
                 WHERE user_id = %s

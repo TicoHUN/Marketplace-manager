@@ -2,13 +2,15 @@
 name = "discord-car-trading-bot"
 version = "1.0.0"
 description = "Advanced Discord bot for car trading with improved error handling, logging, and validation"
-authors = ["Bot Developer <developer@example.com>"]
-requires-python = ">=3.11"
+authors = [
+    {name = "Bot Developer", email = "developer@example.com"}
+]
+requires-python = ">=3.8"
 dependencies = [
-    "aiohttp>=3.12.13",
-    "discord.py>=2.5.2",
-    "mysql-connector-python>=9.3.0",
-    "python-dotenv>=1.1.1",
+    "aiohttp>=3.8.0",
+    "discord.py>=2.3.0",
+    "mysql-connector-python>=8.0.0",
+    "python-dotenv>=0.19.0",
 ]
 
 [project.optional-dependencies]
@@ -21,8 +23,8 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [tool.black]
 line-length = 100
